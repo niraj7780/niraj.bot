@@ -11,8 +11,8 @@ user_images = {}
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "📂 Niraj File Converter Bot\n\n"
-        "✅ Image → PDF\n"
-        "👉 Send images then /convert"
+        "✅ Send images\n"
+        "✅ Then type /convert"
     )
 
 # ✅ Receive Image
@@ -41,6 +41,7 @@ async def convert_to_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     images = []
+
     for path in user_images[user_id]:
         img = Image.open(path).convert("RGB")
         images.append(img)
