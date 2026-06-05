@@ -4,7 +4,7 @@ from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, Con
 from PIL import Image
 from PyPDF2 import PdfReader
 
-TOKEN = os.getenv("8912724756:AAHfmCp1TFLTA5Doh2Bzes5fTNkM4w9CMME")
+TOKEN = os.getenv("TOKEN")
 
 user_images = {}
 
