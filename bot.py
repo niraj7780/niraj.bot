@@ -2,93 +2,82 @@ import os
 import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
-from telegram import Update
+from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
-from PIL import Image
 
-# ✅ Load bot token
+# ✅ Token
 TOKEN = os.getenv("TOKEN")
 
-# ✅ Fake server for Render FREE plan
+# ✅ Fake server for Render
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.end_headers()
-        self.wfile.write(b"Bot is running")
+        self.wfile.write(b"Bot running")
 
 def run_server():
     port = int(os.environ.get("PORT", 10000))
     server = HTTPServer(("0.0.0.0", port), Handler)
     server.serve_forever()
 
-# Run fake server in background
 threading.Thread(target=run_server).start()
 
-# ✅ Store images
-user_images = {}
+# ✅ BUTTON MENU
+def get_menu():
+    keyboard = [
+        ["🔍 Search", "📄 Info", "🛍 Shop"],
+        ["⚙ Settings", "📚 Menu"]
+    ]
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
-# ✅ Start command
+# -------------------------
+# ✅ Start Command
+# -------------------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "📂 Niraj File Converter Bot\n\n"
-        "Send images 📷 then type /convert"
+        "🕵️ I can help you with multiple tools.\nChoose an option below 👇",
+        reply_markup=get_menu()
     )
 
-# ✅ Receive images
-async def receive_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.message.from_user.id
+# -------------------------
+# ✅ Handle Button Clicks
+# -------------------------
+async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text
 
-    if user_id not in user_images:
-        user_images[user_id] = []
+    if text == "🔍 Search":
+        await update.message.reply_text("🔍 Send anything to search")
 
-    photo = update.message.photo[-1]
-    file = await photo.get_file()
+    elif text == "📄 Info":
+        await update.message.reply_text("📄 This is Niraj File Tool Bot")
 
-    file_path = f"{user_id}_{len(user_images[user_id])}.jpg"
-    await file.download_to_drive(file_path)
+    elif text == "🛍 Shop":
+        await update.message.reply_text("🛍 Feature coming soon")
 
-    user_images[user_id].append(file_path)
+    elif text == "⚙ Settings":
+        await update.message.reply_text("⚙ No settings yet")
 
-    await update.message.reply_text("✅ Image added")
+    elif text == "📚 Menu":
+        await update.message.reply_text(
+            "📚 Features:\n✅ Image → PDF\n✅ Multi tools"
+        )
 
-# ✅ Convert images → PDF (FIXED ✅)
-async def convert(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.message.from_user.id
+    else:
+        await update.message.reply_text(
+            "❓ Unknown option\nUse buttons 👇",
+            reply_markup=get_menu()
+        )
 
-    if user_id not in user_images or len(user_images[user_id]) == 0:
-        await update.message.reply_text("❌ Send images first")
-        return
-
-    try:
-        images = []
-
-        # ✅ CORRECT LOOP
-        for path in user_images[user_id]:
-            img = Image.open(path).convert("RGB")
-            images.append(img)
-
-        pdf_path = f"{user_id}_output.pdf"
-
-        images[0].save(pdf_path, save_all=True, append_images=images[1:])
-
-        await update.message.reply_document(open(pdf_path, "rb"))
-
-        # clear after use
-        user_images[user_id] = []
-
-    except Exception as e:
-        print("Error:", e)
-        await update.message.reply_text("⚠️ Conversion failed")
-
+# -------------------------
 # ✅ Main
+# -------------------------
 def main():
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("convert", convert))
-    app.add_handler(MessageHandler(filters.PHOTO, receive_image))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_buttons))
 
-    print("✅ Bot Running...")
+    print("✅ UI Bot Running...")
 
     app.run_polling()
 
