@@ -6,10 +6,10 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 from PIL import Image
 
-# ✅ Load TOKEN from environment
+# ✅ Load bot token
 TOKEN = os.getenv("TOKEN")
 
-# ✅ Fake web server (required for Render FREE plan)
+# ✅ Fake server for Render FREE plan
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -21,21 +21,20 @@ def run_server():
     server = HTTPServer(("0.0.0.0", port), Handler)
     server.serve_forever()
 
-# Run server in background
+# Run fake server in background
 threading.Thread(target=run_server).start()
 
-# ✅ Store images per user
+# ✅ Store images
 user_images = {}
 
 # ✅ Start command
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "📂 Niraj File Converter Bot\n\n"
-        "✅ Send images\n"
-        "✅ Then type /convert"
+        "Send images 📷 then type /convert"
     )
 
-# ✅ Receive image
+# ✅ Receive images
 async def receive_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
 
@@ -52,7 +51,7 @@ async def receive_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text("✅ Image added")
 
-# ✅ Convert images → PDF
+# ✅ Convert images → PDF (FIXED ✅)
 async def convert(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
 
@@ -63,6 +62,7 @@ async def convert(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         images = []
 
+        # ✅ CORRECT LOOP
         for path in user_images[user_id]:
             img = Image.open(path).convert("RGB")
             images.append(img)
@@ -73,14 +73,14 @@ async def convert(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await update.message.reply_document(open(pdf_path, "rb"))
 
-        # clear images after conversion
+        # clear after use
         user_images[user_id] = []
 
     except Exception as e:
         print("Error:", e)
-        await update.message.reply_text("⚠️ Failed to convert")
+        await update.message.reply_text("⚠️ Conversion failed")
 
-# ✅ Main function
+# ✅ Main
 def main():
     app = ApplicationBuilder().token(TOKEN).build()
 
