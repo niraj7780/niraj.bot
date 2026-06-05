@@ -4,11 +4,12 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
+from PIL import Image
 
-# ✅ Token
+# ✅ TOKEN
 TOKEN = os.getenv("TOKEN")
 
-# ✅ Fake server for Render
+# ✅ Fake server for Render free plan
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -25,59 +26,71 @@ threading.Thread(target=run_server).start()
 # ✅ BUTTON MENU
 def get_menu():
     keyboard = [
-        ["🔍 Search", "📄 Info", "🛍 Shop"],
-        ["⚙ Settings", "📚 Menu"]
+        ["📂 Image → PDF", "🖼 JPG → PNG"],
+        ["📊 Compress Image", "ℹ About Bot"]
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
-# -------------------------
-# ✅ Start Command
-# -------------------------
+# ✅ START
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "🕵️ I can help you with multiple tools.\nChoose an option below 👇",
+        "🤖 Niraj File Converter Bot\n\nChoose option 👇",
         reply_markup=get_menu()
     )
 
-# -------------------------
-# ✅ Handle Button Clicks
-# -------------------------
+# ✅ HANDLE BUTTONS
 async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
 
-    if text == "🔍 Search":
-        await update.message.reply_text("🔍 Send anything to search")
+    if text == "📂 Image → PDF":
+        await update.message.reply_text("Send image(s) 📷")
 
-    elif text == "📄 Info":
-        await update.message.reply_text("📄 This is Niraj File Tool Bot")
+    elif text == "🖼 JPG → PNG":
+        await update.message.reply_text("Send JPG image")
 
-    elif text == "🛍 Shop":
-        await update.message.reply_text("🛍 Feature coming soon")
+    elif text == "📊 Compress Image":
+        await update.message.reply_text("Send image to compress")
 
-    elif text == "⚙ Settings":
-        await update.message.reply_text("⚙ No settings yet")
-
-    elif text == "📚 Menu":
+    elif text == "ℹ About Bot":
         await update.message.reply_text(
-            "📚 Features:\n✅ Image → PDF\n✅ Multi tools"
+            "👨‍💻 Niraj Charpe\n"
+            "🤖 Telegram Converter Bot\n"
+            "🚀 Built using Python"
         )
 
-    else:
-        await update.message.reply_text(
-            "❓ Unknown option\nUse buttons 👇",
-            reply_markup=get_menu()
-        )
+# ✅ IMAGE HANDLER (ALL FEATURES)
+async def handle_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_choice = update.message.caption or ""
 
-# -------------------------
-# ✅ Main
-# -------------------------
+    photo = update.message.photo[-1]
+    file = await photo.get_file()
+
+    await file.download_to_drive("input.jpg")
+
+    img = Image.open("input.jpg")
+
+    # ✅ JPG → PNG
+    img.save("output.png")
+    await update.message.reply_document(open("output.png", "rb"))
+
+    # ✅ Compress
+    img.save("compressed.jpg", quality=30)
+    await update.message.reply_document(open("compressed.jpg", "rb"))
+
+    # ✅ Image → PDF
+    pdf_path = "output.pdf"
+    img.convert("RGB").save(pdf_path)
+    await update.message.reply_document(open(pdf_path, "rb"))
+
+# ✅ MAIN
 def main():
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_buttons))
+    app.add_handler(MessageHandler(filters.PHOTO, handle_image))
 
-    print("✅ UI Bot Running...")
+    print("✅ Final Bot Running...")
 
     app.run_polling()
 
