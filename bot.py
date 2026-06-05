@@ -1,16 +1,38 @@
 import os
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
+
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 from PIL import Image
 
+# ✅ Load TOKEN from environment
 TOKEN = os.getenv("TOKEN")
 
+# ✅ Fake web server (required for Render FREE plan)
+class Handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Bot is running")
+
+def run_server():
+    port = int(os.environ.get("PORT", 10000))
+    server = HTTPServer(("0.0.0.0", port), Handler)
+    server.serve_forever()
+
+# Run server in background
+threading.Thread(target=run_server).start()
+
+# ✅ Store images per user
 user_images = {}
 
-# ✅ Start
+# ✅ Start command
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "📂 File Converter Bot\n\nSend images → /convert"
+        "📂 Niraj File Converter Bot\n\n"
+        "✅ Send images\n"
+        "✅ Then type /convert"
     )
 
 # ✅ Receive image
@@ -30,7 +52,7 @@ async def receive_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text("✅ Image added")
 
-# ✅ Convert
+# ✅ Convert images → PDF
 async def convert(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
 
@@ -38,20 +60,27 @@ async def convert(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Send images first")
         return
 
-    images = []
+    try:
+        images = []
 
-    for path in user_images[user_id]:
-        img = Image.open(path).convert("RGB")
-        images.append(img)
+        for path in user_images[user_id]:
+            img = Image.open(path).convert("RGB")
+            images.append(img)
 
-    pdf_path = f"{user_id}_output.pdf"
-    images[0].save(pdf_path, save_all=True, append_images=images[1:])
+        pdf_path = f"{user_id}_output.pdf"
 
-    await update.message.reply_document(open(pdf_path, "rb"))
+        images[0].save(pdf_path, save_all=True, append_images=images[1:])
 
-    user_images[user_id] = []
+        await update.message.reply_document(open(pdf_path, "rb"))
 
-# ✅ Main
+        # clear images after conversion
+        user_images[user_id] = []
+
+    except Exception as e:
+        print("Error:", e)
+        await update.message.reply_text("⚠️ Failed to convert")
+
+# ✅ Main function
 def main():
     app = ApplicationBuilder().token(TOKEN).build()
 
